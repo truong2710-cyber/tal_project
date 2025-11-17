@@ -251,7 +251,7 @@ def main():
                 save_path = out_json[i]
             else:
                 # auto mode
-                save_path = call_args['inputs'].replace('raw', 'keypoints')
+                save_path = call_args['inputs'].replace('frame', 'keypoints')
 
             if len(out_json) == 0:
                 # auto mode

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ---------------- predefined input sources ----------------
-ROOT_DIR="../data/skating/raw"
+ROOT_DIR="$1"
 
 # ---------------- knobs ----------------
 K=${K:-2}                # number of parallel workers; set via:  K=6 bash run_parallel.sh

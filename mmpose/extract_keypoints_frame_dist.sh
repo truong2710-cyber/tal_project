@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="../data/shot/frame"
+ROOT_DIR="$1"
 
 # image patterns (case-insensitive)
 IMG_GLOBS=( '*.jpg' '*.jpeg' '*.png' '*.bmp' '*.webp' '*.JPG' '*.JPEG' '*.PNG' '*.BMP' '*.WEBP' )

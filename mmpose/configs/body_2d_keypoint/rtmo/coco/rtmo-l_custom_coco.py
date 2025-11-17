@@ -1,11 +1,11 @@
-_base_ = ['/workspace/truongvq/mmpose/configs/_base_/default_runtime.py']
+_base_ = ['../../../_base_/default_runtime.py']
 # -----------------------------------------------
 from configs._base_.datasets.coco_custom_20 import dataset_info as custom_dataset_info 
 metainfo = custom_dataset_info
 
-metafile_path = '/workspace/truongvq/mmpose/configs/_base_/datasets/coco_custom_20.py'
+metafile_path = '../../../_base_/datasets/coco_custom_20.py'
 
-load_from = '/workspace/truongvq/mmpose/pretrained_weights/epoch_240.pth'
+load_from = '../../../../pretrained_weights/epoch_240.pth'
 # -----------------------------------------------
 
 # runtime
