@@ -1,6 +1,6 @@
 # TAL Project
 
-This repository implements a **Temporal Action Localization (TAL)** pipeline that combines [ActionFormer](https://github.com/happyharrycn/actionformer_release) and [OpenMMLab](https://github.com/open-mmlab/mmpose) for **action recognition and localization** on the *shot* and *skating* datasets.
+This repository implements a **Temporal Action Localization (TAL)** pipeline that combines [ActionFormer](https://github.com/happyharrycn/actionformer_release) and [OpenMMLab](https://github.com/open-mmlab/mmpose) for **action recognition and localization** on the *shot* and *skating* datasets using feautures from poses.
 
 ---
 
@@ -85,7 +85,7 @@ python parse_tal_labels_skating.py --root .
    ```
    Frames will be saved to `data/shot/frame/`.
 
-2. Download the pretrained model `epoch_240.pth` and place it in:
+2. Download the pretrained model [epoch_240.pth](https://huggingface.co/truongvu2710/keypoints/resolve/main/pretrained_weights/epoch_240.pth?download=true) and place it in:
    ```
    mmpose/pretrained_weights/
    ```
@@ -101,6 +101,8 @@ After completion, keypoints will be stored in:
 ```
 data/<dataset_name>/keypoints/
 ```
+
+**Optional:** You can download the pre-extracted keypoints at https://huggingface.co/truongvu2710/keypoints/tree/main.
 
 ---
 
