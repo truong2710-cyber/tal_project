@@ -29,21 +29,32 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+# LABEL_MAP = {
+#     "ACCEL_BACK": 0,
+#     "ACCEL_FORW": 1,
+#     "FACEOFF_BODY_POSITION": 2,
+#     "GLID_BACK": 3,
+#     "GLID_FORW": 4,
+#     "MAINTAIN_POSITION": 5,
+#     "ON_A_KNEE": 6,
+#     "POST_WHISTLE_GLIDING": 7,
+#     "PRONE": 8,
+#     "RAPID_DECELERATION": 9,
+#     "SHOT": 10,
+#     "TRANS_BACK_TO_FORW": 11,
+#     "TRANS_FORW_TO_BACK": 12,
+# }
+
 LABEL_MAP = {
     "ACCEL_BACK": 0,
     "ACCEL_FORW": 1,
     "FACEOFF_BODY_POSITION": 2,
     "GLID_BACK": 3,
     "GLID_FORW": 4,
-    "MAINTAIN_POSITION": 5,
-    "ON_A_KNEE": 6,
-    "POST_WHISTLE_GLIDING": 7,
-    "PRONE": 8,
-    "RAPID_DECELERATION": 9,
-    "SHOT": 10,
-    "TRANS_BACK_TO_FORW": 11,
-    "TRANS_FORW_TO_BACK": 12,
+    "POST_WHISTLE_GLIDING": 5,
 }
+
+ACTIVITIES = list(LABEL_MAP.keys())
 
 # ------------------------------
 # Helpers
@@ -127,7 +138,9 @@ def load_and_process_csv(csv_path: str) -> List[dict]:
             activity = raw[8].strip() if len(raw) > 8 else ""
 
             # Clear NOT_SURE
-            if "NOT_SURE" in activity.upper():
+            # if "NOT_SURE" in activity.upper():
+            #     activity = ""
+            if activity.upper() not in ACTIVITIES:
                 activity = ""
 
             video_name, frame_idx = parse_video_and_frame(filename)
