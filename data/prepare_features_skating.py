@@ -305,8 +305,8 @@ def process_parent_video(
 def main():
     parser = argparse.ArgumentParser(description="Auto-prepare bbox-normalized pose features (W, K*M*2) for all TAL videos.")
     parser.add_argument("--root", type=str, default=".", help="Project root (contains 'skating/').")
-    parser.add_argument("--K", type=int, required=True, help="Window size (frames).")
-    parser.add_argument("--S", type=int, required=True, help="Stride (frames).")
+    parser.add_argument("--K", type=int, default=16, help="Window size (frames).")
+    parser.add_argument("--S", type=int, default=8, help="Stride (frames).")
     parser.add_argument("--iou_thr", type=float, default=0.3, help="IoU threshold for matching tracking bbox to pose.")
     args = parser.parse_args()
 

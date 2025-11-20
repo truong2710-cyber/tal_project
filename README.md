@@ -113,11 +113,12 @@ This step extracts clips from consecutive frames and creates ActionFormer input 
 By default:
 - 16 frames per feature  
 - Frame stride = 8
+- IoU threshold = 0.3 (for matching tracked boxes with keypoints)
 
 ```bash
 cd ../data
-python prepare_features_shot.py --root .
-python prepare_features_skating.py --root .
+python prepare_features_shot.py --root . --K [num_frames_per_feat] --S [frame_stride] --iou_thr [iou_thresh]
+python prepare_features_skating.py --root . --K [num_frames_per_feat] --S [frame_stride] --iou_thr [iou_thresh]
 ```
 
 Output directory:
@@ -175,16 +176,21 @@ python eval.py ./configs/skating_pose.yaml ./ckpt/skating_pose_test
 To run inference and visualize results:
 
 ```bash
-bash inference.sh INPUT_PATH
+bash inference.sh <INPUT_PATH> <af_config_yaml> <af_ckpt> [output_dir]
 ```
 
 - `INPUT_PATH` can be:
   - a directory containing frames, or  
   - a path to an `.mp4` video.
 
+For example:
+```
+bash inference.sh '../data/shot/raw/2025-01-31 Nashville at Buffalo/ShotEvent/2025-01-31_Nashville_at_Buffalo_ShotEvent_1_023_ev_f8o9gx3_snap_89_29.mp4' configs/shot_pose.yaml ckptshot_pose_test/
+```
+
 The output video visualization will be saved at:
 ```
-output/test_video_output.mp4
+output_dir/inference.mp4
 ```
 
 ---

@@ -296,8 +296,8 @@ def process_child_video(
 def main():
     parser = argparse.ArgumentParser(description="Prepare bbox-normalized pose features (W, K*M*2) for ShotEvent hierarchy.")
     parser.add_argument("--root", type=str, default=".", help="Project root (contains '/shot/').")
-    parser.add_argument("--K", type=int, required=True, help="Window size in frames.")
-    parser.add_argument("--S", type=int, required=True, help="Stride in frames.")
+    parser.add_argument("--K", type=int, default=16, help="Window size in frames.")
+    parser.add_argument("--S", type=int, default=8, help="Stride in frames.")
     parser.add_argument("--iou_thr", type=float, default=0.3, help="Min IoU to accept a pose match.")
     parser.add_argument("--expand", type=float, default=1.0, help="Expand factor for tracking bbox before IoU (1.0 = none).")
     parser.add_argument("--imgW", type=int, default=1280, help="Image width for bbox clipping when expanding.")
