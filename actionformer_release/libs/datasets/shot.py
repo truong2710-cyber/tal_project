@@ -168,6 +168,11 @@ class ShotDataset(Dataset):
         else:
             segments, labels = None, None
 
+        if segments is None:
+            segments = torch.zeros((0, 2), dtype=torch.float32)
+        if labels is None:
+            labels = torch.zeros((0,), dtype=torch.int64)
+            
         # return a data dict
         data_dict = {'video_id'        : video_item['id'],
                      'feats'           : feats,      # C x T

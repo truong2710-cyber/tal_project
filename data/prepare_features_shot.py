@@ -256,7 +256,6 @@ def process_child_video(
             match_map = json.load(f)  # {clip_key: [start_abs, end_abs]}
 
         out_pid = out_base / pid_str
-        out_pid.mkdir(parents=True, exist_ok=True)
 
         for clip_key, (start_abs, end_abs) in match_map.items():
             seq = extract_clip_pose_sequence(
@@ -277,6 +276,8 @@ def process_child_video(
             windows = sliding_windows(N, K, S)
             if not windows:
                 continue
+
+            out_pid.mkdir(parents=True, exist_ok=True)
 
             W = len(windows)
             out = np.zeros((W, K * M * 2), dtype=np.float32)

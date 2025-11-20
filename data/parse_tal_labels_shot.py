@@ -9,7 +9,7 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 
 ACTION_NAME = "SHOT"
 ACTION_ID = 0  # single class (SHOT)
@@ -57,7 +57,6 @@ class Stats:
     def add_clip(self, n_frames: int, anns: List[Annotation]):
         self.total_clips += 1
         self.total_frames += n_frames
-        # count action frames from annotations' segment(frames) [start, end)
         seg_frames = 0
         for a in anns:
             s = int(round(a.segment_frames[0]))
@@ -73,15 +72,15 @@ class Stats:
         avg_action_len = (self.total_action_frames / self.total_action_segments) if self.total_action_segments > 0 else 0.0
         avg_action_ratio = (self.total_action_frames / self.total_frames) if self.total_frames > 0 else 0.0
         return (
-            "\n===== Dataset Statistics (after cropping; saved clips only) =====\n"
-            f"Total clips saved:           {self.total_clips}\n"
-            f"Total frames (clips):        {self.total_frames}\n"
-            f"Total action frames:         {self.total_action_frames}\n"
-            f"Total action segments:       {self.total_action_segments}\n"
-            f"Average clip length (frames): {avg_clip_len:.2f}\n"
-            f"Average action length (frames): {avg_action_len:.2f}\n"
-            f"Average action ratio:        {avg_action_ratio:.3f}\n"
-            "=================================================================\n"
+            "\n===== Dataset Statistics (saved clips only) =====\n"
+            f"Total clips saved:             {self.total_clips}\n"
+            f"Total frames (clips):          {self.total_frames}\n"
+            f"Total action frames:           {self.total_action_frames}\n"
+            f"Total action segments:         {self.total_action_segments}\n"
+            f"Average clip length (frames):  {avg_clip_len:.2f}\n"
+            f"Average action length (frames):{avg_action_len:.2f}\n"
+            f"Average action ratio:          {avg_action_ratio:.3f}\n"
+            "=================================================\n"
         )
 
 # ------------------------------
@@ -192,7 +191,7 @@ def pick_random_crop_window_from_intervals(
     clip_frames: consecutive absolute frame ids for a PID-clip.
     intervals: list of (s,e) inclusive absolute frame ranges for SHOT (for that PID).
     Returns (start_local, end_local) inclusive indices inside clip_frames.
-    If the clip has **no action intersection**, return (0, len(clip_frames)-1) and let caller skip later.
+    If the clip has **no action intersection**, return (0, len(clip_frames)-1).
     If the clip is **all action**, returns full clip (no crop).
     """
     N = len(clip_frames)
@@ -236,51 +235,39 @@ def pick_random_crop_window_from_intervals(
     return start_local, end_local
 
 # ------------------------------
-# Emit TAL for one video (returns stats increment)
+# Collect candidates for one video (no writing here)
 # ------------------------------
 
-def emit_for_video(
+def collect_candidates_for_video(
     root: Path,
     match_name: str,
     video_name: str,
     fps: float,
-    subset: str,
-    stats: Stats,
     min_ratio: float = 0.3,
     max_ratio: float = 0.5,
-) -> List[Path]:
+) -> List[Dict[str, Any]]:
     """
-    Process one video and write TAL jsons:
-      input video:   shot/raw/<match_name>/ShotEvent/<video_name>.mp4  (not read here, just for layout)
-      tracking csv:  shot/label/tracking/<match_name>/ShotEvent/<video_name>.csv
-      temporal csv:  shot/label/temporal/<video_name>.csv
-      outputs:       shot/label/tal/<match_name>/ShotEvent/<video_name>/<pid>/<video_name>_<pid>_<clipid>.json
-                     shot/label/tal/<match_name>/ShotEvent/<video_name>/<pid>/match.json
-    Also updates stats (after cropping; saved clips only).
+    Returns a list of clip candidates (both pos & neg) for this video.
+    Each candidate dict contains:
+      match_name, video_name, pid, clipid, clip_key, c_start, c_end, duration_sec, anns(List[Annotation])
     """
-    written: List[Path] = []
-
     tracking_csv = root / "shot" / "label" / "tracking" / match_name / "ShotEvent" / f"{video_name}.csv"
     temporal_csv = root / "shot" / "label" / "temporal" / f"{video_name}.csv"
 
     presence = read_tracking_presence(tracking_csv)  # pid -> absolute frames
     temporal = read_temporal_labels(temporal_csv, f"{video_name}.mp4")  # pid -> [(s,e)]
 
-    out_base = root / "shot" / "label" / "tal" / match_name / "ShotEvent" / video_name
-    out_base.mkdir(parents=True, exist_ok=True)
+    candidates: List[Dict[str, Any]] = []
 
     for pid, frames in presence.items():
         clips = group_consecutive(frames)
-        pid_dir = out_base / str(pid)
-        matches: Dict[str, List[int]] = {}
-
         pid_intervals = temporal.get(pid, [])
 
         for clipid, clip_frames in enumerate(clips):
             if not clip_frames:
                 continue
 
-            # --- Random crop based on SHOT coverage (if any) ---
+            # Random crop (falls back to full clip if no overlapping action)
             crop_s_local, crop_e_local = pick_random_crop_window_from_intervals(
                 clip_frames, pid_intervals, min_ratio=min_ratio, max_ratio=max_ratio
             )
@@ -299,7 +286,7 @@ def emit_for_video(
                 if is_e < is_s:
                     continue
                 rel_s = is_s - c_start
-                rel_e_ex = (is_e - c_start) + 1
+                rel_e_ex = (is_e - c_start) + 1  # end exclusive
                 seg_s = round1(rel_s / fps)
                 seg_e = round1(rel_e_ex / fps)
                 anns.append(
@@ -311,44 +298,85 @@ def emit_for_video(
                     )
                 )
 
-            # ---- Skip clips with no SHOT after cropping ----
-            if not anns:
-                continue
-
-            # Update stats (saved clip only)
-            stats.add_clip(n_frames=len(cropped_frames), anns=anns)
-
-            # Write clip json
             clip_key = f"{video_name}_{pid}_{clipid}"
-            pid_dir.mkdir(parents=True, exist_ok=True)
             duration_sec = round2(len(cropped_frames) / fps)
-            tal_obj = {
-                clip_key: {
-                    "subset": subset,
-                    "duration": duration_sec,
-                    "fps": fps,
-                    "annotations": [a.to_dict() for a in anns],
-                }
+
+            candidates.append({
+                "match_name": match_name,
+                "video_name": video_name,
+                "pid": pid,
+                "clipid": clipid,
+                "clip_key": clip_key,
+                "c_start": c_start,
+                "c_end": c_end,
+                "duration_sec": duration_sec,
+                "anns": anns,  # [] for background
+            })
+
+    return candidates
+
+# ------------------------------
+# Write selected candidates
+# ------------------------------
+
+def write_selected(
+    root: Path,
+    subset: str,
+    fps: float,
+    selected: List[Dict[str, Any]],
+    stats: Stats,
+) -> List[Path]:
+    """
+    Write per-clip JSONs and per-pid match.json for the selected candidates.
+    Returns list of written paths.
+    """
+    written: List[Path] = []
+    # Group by (match_name, video_name, pid) to build match.json per pid
+    groups: Dict[Tuple[str, str, int], Dict[str, List[int]]] = defaultdict(dict)
+
+    for c in selected:
+        match_name = c["match_name"]
+        video_name = c["video_name"]
+        pid = c["pid"]
+        clip_key = c["clip_key"]
+        c_start, c_end = c["c_start"], c["c_end"]
+        duration_sec = c["duration_sec"]
+        anns: List[Annotation] = c["anns"]
+
+        out_base = root / "shot" / "label" / "tal" / match_name / "ShotEvent" / video_name / str(pid)
+        out_base.mkdir(parents=True, exist_ok=True)
+
+        tal_obj = {
+            clip_key: {
+                "subset": subset,
+                "duration": duration_sec,
+                "fps": fps,
+                "annotations": [a.to_dict() for a in anns],
             }
-            out_path = pid_dir / f"{clip_key}.json"
-            with out_path.open("w", encoding="utf-8") as f:
-                json.dump(tal_obj, f, ensure_ascii=False, indent=2)
-            written.append(out_path)
+        }
+        out_path = out_base / f"{clip_key}.json"
+        with out_path.open("w", encoding="utf-8") as f:
+            json.dump(tal_obj, f, ensure_ascii=False, indent=2)
+        written.append(out_path)
 
-            # match.json uses absolute 0-based start/end for the CROPPED clip
-            matches[clip_key] = [c_start, c_end]
+        # stats
+        stats.add_clip(n_frames=(c_end - c_start + 1), anns=anns)
 
-        # Write match.json if we saved any clips for this pid
-        if matches:
-            match_path = pid_dir / "match.json"
-            with match_path.open("w", encoding="utf-8") as f:
-                json.dump(matches, f, ensure_ascii=False, indent=2)
-            written.append(match_path)
+        # match.json
+        groups[(match_name, video_name, pid)][clip_key] = [c_start, c_end]
+
+    # write match.json per pid
+    for (match_name, video_name, pid), m in groups.items():
+        pid_dir = root / "shot" / "label" / "tal" / match_name / "ShotEvent" / video_name / str(pid)
+        match_path = pid_dir / "match.json"
+        with match_path.open("w", encoding="utf-8") as f:
+            json.dump(m, f, ensure_ascii=False, indent=2)
+        written.append(match_path)
 
     return written
 
 # ------------------------------
-# Walk all videos
+# Walk all videos → collect globally → balance → write
 # ------------------------------
 
 def main(root: str, fps: float, subset: str, seed: int | None, min_ratio: float, max_ratio: float):
@@ -361,8 +389,9 @@ def main(root: str, fps: float, subset: str, seed: int | None, min_ratio: float,
         raise FileNotFoundError(f"Raw root not found: {raw_root}")
 
     stats = Stats()
-    all_written: List[Path] = []
+    all_candidates: List[Dict[str, Any]] = []
 
+    # 1) COLLECT candidates from all videos/PIDs (no writing yet)
     for match_dir in sorted(raw_root.iterdir()):
         if not match_dir.is_dir():
             continue
@@ -371,30 +400,47 @@ def main(root: str, fps: float, subset: str, seed: int | None, min_ratio: float,
         if not se_dir.exists():
             continue
         for mp4 in sorted(se_dir.glob("*.mp4")):
-            video_name = mp4.stem  # without .mp4
+            video_name = mp4.stem
             try:
-                written = emit_for_video(
+                cands = collect_candidates_for_video(
                     root=rootp,
                     match_name=match_name,
                     video_name=video_name,
                     fps=fps,
-                    subset=subset,
-                    stats=stats,
                     min_ratio=min_ratio,
                     max_ratio=max_ratio,
                 )
+                all_candidates.extend(cands)
             except Exception as e:
-                print(f"⚠️  Error processing {mp4}: {e}")
+                print(f"⚠️  Error collecting {mp4}: {e}")
                 continue
-            all_written.extend(written)
 
-    print(f"Done. Wrote {len(all_written)} files.")
+    # 2) GLOBAL BALANCING: negatives == positives
+    positives = [c for c in all_candidates if len(c["anns"]) > 0]
+    negatives = [c for c in all_candidates if len(c["anns"]) == 0]
+
+    num_pos = len(positives)
+    num_neg = len(negatives)
+    k = min(num_pos, num_neg)
+    neg_keep = random.sample(negatives, k) if num_neg > k else negatives[:k]
+
+    selected = positives + neg_keep
+
+    # 3) WRITE selected and update stats
+    written = write_selected(root=rootp, subset=subset, fps=fps, selected=selected, stats=stats)
+
+    # 4) REPORT
+    print(f"Done. Wrote {len(written)} files.")
     print(stats.summary())
-    # for p in all_written[:10]:
-    #     print("  ", p)
+    print("=== GLOBAL CLIP SUMMARY ===")
+    print(f"Total positive clips found: {num_pos}")
+    print(f"Total negative clips found: {num_neg}")
+    print(f"Total negatives kept:       {len(neg_keep)}")
+    print(f"Total balanced clips saved: {len(selected)} (={num_pos}+{len(neg_keep)})")
+    print("===========================")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Prepare TAL labels (SHOT) with random action-centered crops, plus stats.")
+    parser = argparse.ArgumentParser(description="Prepare TAL labels (SHOT) with random action-centered crops, globally balanced pos/neg.")
     parser.add_argument("--root", type=str, default=".", help="Project root (contains 'shot/').")
     parser.add_argument("--fps", type=float, default=60.0, help="Video FPS (default: 60).")
     parser.add_argument("--subset", type=str, default="Train", help="Subset name (default: 'Train').")
