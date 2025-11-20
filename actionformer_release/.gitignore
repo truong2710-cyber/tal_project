@@ -1,5 +1,6 @@
 data/
 ckpt/
+output/
 pretrained/
 exp/
 libs/utils/dist
@@ -7,6 +8,9 @@ libs/utils/nms_1d_cpu.egg-info
 **/build
 *.pt
 *.csv
+*.mp4
+*.json
+*.npy
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
