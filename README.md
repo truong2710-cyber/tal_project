@@ -44,7 +44,7 @@ Extract raw data and place them under the `data/` directory as follows:
 #### Shot Dataset
 ```
 data/shot/
-├── frame/
+├── raw/
 ├── label/
 │   ├── temporal/
 │   └── tracking/
@@ -53,7 +53,7 @@ data/shot/
 #### Skating Dataset
 ```
 data/skating/
-├── raw/
+├── frame/
 ├── label/
 │   ├── temporal/
 │   └── tracking/
@@ -72,7 +72,7 @@ cd data
 python parse_tal_labels_shot.py --root .
 
 # For skating dataset
-python parse_tal_labels_skating.py --root .
+python parse_tal_labels_skating.py --root skating/frame/
 ```
 
 ---
