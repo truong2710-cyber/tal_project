@@ -15,23 +15,13 @@ cd tal_project
 
 ## ⚙️ 2. Environment Setup
 
-### 2.1. ActionFormer Environment
+Run
 
 ```bash
-conda env create -f actionformer.yml
-cd actionformer_release/libs/utils
-python setup.py install --user
-cd ../../..
+bash install.sh
 ```
 
-### 2.2. OpenMMLab Environment
-
-```bash
-conda env create -f openmmlab.yml
-cd mmpose
-pip install -e .
-cd ..
-```
+to install. This will create 2 conda environments: ``actionformer`` and ``openmmlab``.
 
 ---
 
