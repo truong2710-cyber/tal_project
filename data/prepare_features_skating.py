@@ -232,12 +232,12 @@ def process_parent_video(
 ) -> List[Path]:
     """
     TAL:    skating/label/tal/<parent_video>/<pid>/{*.json, match.json}
-    TRACK:  skating/label/tracking/<parent_video> tracked.csv
+    TRACK:  skating/label/temporal/<parent_video> exported.csv
     KEYPTS: skating/keypoints/<parent_video>.json
     Save:   skating/features/<parent_video>/<pid>/<clip>.npy  with shape (W, K*M*2)
     """
     tal_base = root / "skating" / "label" / "tal" / parent_video
-    track_csv = root / "skating" / "label" / "tracking" / f"{parent_video} tracked.csv"
+    track_csv = root / "skating" / "label" / "temporal" / f"{parent_video} exported.csv"
     kp_json = root / "skating" / "keypoints" / f"{parent_video}.json"
     feat_base = root / "skating" / "features" / parent_video
 

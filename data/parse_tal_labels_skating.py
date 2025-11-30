@@ -75,19 +75,19 @@ def parse_video_and_frame(filename: str) -> Tuple[str, int]:
     idx = int(m.group("idx"))
     return base, idx
 
-def replace_frame_with_label_tal(path: Path) -> Path:
+def replace_keypoints_with_label_tal(path: Path) -> Path:
     """
-    Replace the 'frame' component in a path with 'label/tal'.
-    If 'frame' isn't present, appends 'label/tal' at the end.
+    Replace the 'keypoints' component in a path with 'label/tal'.
+    If 'keypoints' isn't present, appends 'label/tal' at the end.
     """
     parts = list(path.parts)
     try:
-        i = parts.index("frame")
+        i = parts.index("keypoints")
         parts[i] = "label"
         parts.insert(i + 1, "tal")
         return Path(*parts)
     except ValueError:
-        # 'frame' not found: default to sibling 'label/tal' under the same root
+        # 'keypoints' not found: default to sibling 'label/tal' under the same root
         return path / "label" / "tal"
 
 def round1(x: float) -> float:
@@ -252,7 +252,7 @@ def pick_random_crop_window(
 # ------------------------------
 
 def emit_clip_jsons_and_matches(
-    frames_root: str,
+    keypoint_root: str,
     fps: float,
     subset: str,
     clips_by_key: Dict[Tuple[str, str], List[List[int]]],
@@ -269,8 +269,8 @@ def emit_clip_jsons_and_matches(
     """
     written: List[Path] = []
 
-    frames_root = Path(frames_root)
-    out_root = replace_frame_with_label_tal(frames_root)
+    keypoint_root = Path(keypoint_root)
+    out_root = replace_keypoints_with_label_tal(keypoint_root)
 
     # Determine base frame (0-based) per video
     video_min_frame = defaultdict(lambda: math.inf)
@@ -450,34 +450,19 @@ def emit_clip_jsons_and_matches(
 
     return written
 
-# ------------------------------
-# Label map writer (optional)
-# ------------------------------
-
-def write_label_map(frames_root: str, label_to_id: Dict[str, int]):
-    """
-    Optionally write a global label map alongside the output root: .../label/tal/label_map.json
-    """
-    frames_root = Path(frames_root)
-    out_root = replace_frame_with_label_tal(frames_root)
-    out_root.mkdir(parents=True, exist_ok=True)
-    path = out_root / "label_map.json"
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(label_to_id, f, ensure_ascii=False, indent=2)
-    return path
 
 # ------------------------------
 # Main
 # ------------------------------
 
-def main(csv_path: str, frames_root: str, fps: float = 60.0, subset: str = "Train", min_crop_ratio: float = 0.3, max_crop_ratio: float = 0.5):
+def main(csv_path: str, keypoint_root: str, fps: float = 60.0, subset: str = "Train", min_crop_ratio: float = 0.3, max_crop_ratio: float = 0.5):
     rows = load_and_process_csv(csv_path)
     label_to_id = LABEL_MAP
     clips_by_key = group_person_clips(rows)
     frame_to_act = build_frame_to_activity(rows)
 
     written = emit_clip_jsons_and_matches(
-        frames_root=frames_root,
+        keypoint_root=keypoint_root,
         fps=fps,
         subset=subset,
         clips_by_key=clips_by_key,
@@ -486,8 +471,6 @@ def main(csv_path: str, frames_root: str, fps: float = 60.0, subset: str = "Trai
         min_crop_ratio=min_crop_ratio,
         max_crop_ratio=max_crop_ratio,
     )
-    # Optionally write global label map
-    # lm_path = write_label_map(frames_root, label_to_id)
 
     print(f"Done. Wrote {len(written)} files.")
     for p in written[:5]:
@@ -495,7 +478,7 @@ def main(csv_path: str, frames_root: str, fps: float = 60.0, subset: str = "Trai
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare TAL labels from CSV and frame paths.")
-    parser.add_argument("--root", type=str, required=True, help="Path to the root directory containing all video frames.")
+    parser.add_argument("--root", type=str, required=True, help="Path to the root directory containing all video keypoints.")
     parser.add_argument("--fps", type=float, default=60.0, help="Video FPS (default: 60).")
     parser.add_argument("--subset", type=str, default="Train", help="Subset name (default: 'Train').")
     parser.add_argument("--min_ratio", type=float, default=0.3, help="Minimum crop ratio for action span (default: 0.3).")
@@ -506,28 +489,37 @@ if __name__ == "__main__":
     if args.seed is not None:
         random.seed(args.seed)
 
-    # === Traverse all subdirectories under frame_dir ===
-    frame_root = Path(args.root)
-    if not frame_root.exists():
-        raise FileNotFoundError(f"Frame directory not found: {frame_root}")
+    # === Traverse all files under keypoints dir ===
+    keypoints_root = Path(args.root)
+    if not keypoints_root.exists():
+        raise FileNotFoundError(f"Frame directory not found: {keypoints_root}")
 
-    subdirs = [p for p in frame_root.iterdir() if p.is_dir()]
-    print(f"Found {len(subdirs)} subdirectories in {frame_root}")
+    json_files = [p for p in keypoints_root.iterdir() if p.is_file() and p.suffix == ".json"]
+    print(f"Found {len(json_files)} JSON files in {keypoints_root}")
 
-    for frame_path in subdirs:
-        print(f"\nProcessing video frames in: {frame_path}")
-        # Deduce CSV path (replace 'frame' with 'label/temporal' + ' exported.csv')
-        csv_path = str(frame_path).replace("frame", "label/temporal").rstrip("/") + " exported.csv"
+    for json_path in json_files:
+        video_name = json_path.stem 
+        print(f"\nProcessing video/annotations for: {video_name}")
+
+        keypoint_root = json_path.with_suffix("")  # removes ".json"
+
+        # Deduce CSV path:
+        # e.g. ".../keypoints/video1.json" -> ".../label/temporal/video1 exported.csv"
+        csv_path = (
+            str(json_path)
+            .replace("keypoints", "label/temporal")
+            .replace(".json", " exported.csv")
+        )
 
         try:
             main(
                 csv_path=csv_path,
-                frames_root=str(frame_path),
+                keypoint_root=str(keypoint_root),
                 fps=args.fps,
                 subset=args.subset,
                 min_crop_ratio=args.min_ratio,
                 max_crop_ratio=args.max_ratio,
             )
         except Exception as e:
-            print(f"[ERROR] Failed on {frame_path}: {e}")
+            print(f"[ERROR] Failed on {json_path}: {e}")
             continue

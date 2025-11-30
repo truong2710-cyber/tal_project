@@ -51,23 +51,7 @@ data/skating/
 
 ---
 
-### 3.2. TAL Label Parsing
-
-We use the **THUMOS14** label format as implemented in `actionformer_release/` and generate TAL labels from temporal and tracking annotations.
-
-```bash
-cd data
-
-# For shot dataset
-python parse_tal_labels_shot.py --root .
-
-# For skating dataset
-python parse_tal_labels_skating.py --root skating/frame/
-```
-
----
-
-### 3.3. Keypoint Extraction
+### 3.2. Keypoint Extraction
 
 1. Decode the shot videos:
    ```bash
@@ -93,6 +77,22 @@ data/<dataset_name>/keypoints/
 ```
 
 **Optional:** You can download the pre-extracted keypoints at https://huggingface.co/truongvu2710/keypoints/tree/main.
+
+---
+
+### 3.3. TAL Label Parsing
+
+We use the **THUMOS14** label format as implemented in `actionformer_release/` and generate TAL labels from temporal and tracking annotations.
+
+```bash
+cd data
+
+# For shot dataset
+python parse_tal_labels_shot.py --root .
+
+# For skating dataset
+python parse_tal_labels_skating.py --root skating/keypoints/
+```
 
 ---
 

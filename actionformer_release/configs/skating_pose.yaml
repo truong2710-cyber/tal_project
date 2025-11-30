@@ -6,7 +6,7 @@ dataset: {
   feat_folder: ./data/skating/pose_features,
   file_prefix: ~,
   file_ext: .npy,
-  num_classes: 13,
+  num_classes: 6,
   input_dim: 640,
   feat_stride: 8,
   num_frames: 16,

@@ -384,7 +384,7 @@ def main(root: str, fps: float, subset: str, seed: int | None, min_ratio: float,
         random.seed(seed)
 
     rootp = Path(root)
-    raw_root = rootp / "shot" / "raw"
+    raw_root = rootp / "shot" / "keypoints"
     if not raw_root.exists():
         raise FileNotFoundError(f"Raw root not found: {raw_root}")
 
@@ -399,8 +399,8 @@ def main(root: str, fps: float, subset: str, seed: int | None, min_ratio: float,
         se_dir = match_dir / "ShotEvent"
         if not se_dir.exists():
             continue
-        for mp4 in sorted(se_dir.glob("*.mp4")):
-            video_name = mp4.stem
+        for file_name in sorted(se_dir.glob("*.json")):
+            video_name = file_name.stem
             try:
                 cands = collect_candidates_for_video(
                     root=rootp,
@@ -412,7 +412,7 @@ def main(root: str, fps: float, subset: str, seed: int | None, min_ratio: float,
                 )
                 all_candidates.extend(cands)
             except Exception as e:
-                print(f"⚠️  Error collecting {mp4}: {e}")
+                print(f"⚠️  Error collecting {file_name}: {e}")
                 continue
 
     # 2) GLOBAL BALANCING: negatives == positives
