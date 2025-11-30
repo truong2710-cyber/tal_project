@@ -175,7 +175,7 @@ bash inference.sh <INPUT_PATH> <af_config_yaml> <af_ckpt> [output_dir]
 
 For example:
 ```
-bash inference.sh '../data/shot/raw/2025-01-31 Nashville at Buffalo/ShotEvent/2025-01-31_Nashville_at_Buffalo_ShotEvent_1_023_ev_f8o9gx3_snap_89_29.mp4' configs/shot_pose.yaml ckptshot_pose_test/
+bash inference.sh '../data/shot/raw/2025-01-31 Nashville at Buffalo/ShotEvent/2025-01-31_Nashville_at_Buffalo_ShotEvent_1_023_ev_f8o9gx3_snap_89_29.mp4' configs/shot_pose.yaml ckpt/shot_pose_test/
 ```
 
 The output video visualization will be saved at:
