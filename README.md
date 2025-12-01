@@ -148,6 +148,8 @@ python train.py ./configs/shot_pose.yaml --output test
 python train.py ./configs/skating_pose.yaml --output test
 ```
 
+**Optional:** You can download the pretrained weights at https://huggingface.co/truongvu2710/keypoints/tree/main/ckpt and move the folder ``ckpt/`` inside ``actionformer_release/``.
+
 ---
 
 ### 3.7. Evaluation
